@@ -1,1 +1,1 @@
-Jacob Clover Server
+Jacob Example Server

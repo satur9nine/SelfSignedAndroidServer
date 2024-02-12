@@ -60,7 +60,7 @@ public class HttpServer extends Service {
     }
 
     private PrivateKey loadPrivateKey(String privateKeyPem) throws IOException, GeneralSecurityException {
-        return pemLoadPrivateKeyPkcs1OrPkcs8Encoded(privateKeyPem);
+        return pemLoadPrivateKeyPkcs8Encoded(privateKeyPem);
     }
 
     public static X509Certificate parseCert(String pem) {
@@ -76,7 +76,7 @@ public class HttpServer extends Service {
         }
     }
 
-    private static PrivateKey pemLoadPrivateKeyPkcs1OrPkcs8Encoded(String privateKeyPem) throws GeneralSecurityException, IOException {
+    private static PrivateKey pemLoadPrivateKeyPkcs8Encoded(String privateKeyPem) throws GeneralSecurityException {
         // PKCS#8 format
         final String PEM_PRIVATE_START = "-----BEGIN PRIVATE KEY-----";
         final String PEM_PRIVATE_END = "-----END PRIVATE KEY-----";
@@ -91,6 +91,7 @@ public class HttpServer extends Service {
             KeyFactory factory = KeyFactory.getInstance("RSA");
             return factory.generatePrivate(new PKCS8EncodedKeySpec(pkcs8EncodedKey));
         }
+
         throw new GeneralSecurityException("Not supported format of a private key");
     }
 
@@ -107,7 +108,8 @@ public class HttpServer extends Service {
                     // Must consume the body
                     session.parseBody(parameters);
                 } catch (IOException e) {
-                    return newFixedLengthResponse(Response.Status.INTERNAL_ERROR, NanoHTTPD.MIME_PLAINTEXT, "SERVER INTERNAL ERROR: IOException: " + e.getMessage());
+                    return newFixedLengthResponse(Response.Status.INTERNAL_ERROR, NanoHTTPD.MIME_PLAINTEXT,
+                            "SERVER INTERNAL ERROR: IOException: " + e.getMessage());
                 } catch (ResponseException e) {
                     return newFixedLengthResponse(e.getStatus(), NanoHTTPD.MIME_PLAINTEXT, e.getMessage());
                 }
@@ -122,14 +124,12 @@ public class HttpServer extends Service {
         keyManagerFactory.init(ks, KEY_PASSWORD.toCharArray());
 
         SSLServerSocketFactory factory = NanoHTTPD.makeSSLSocketFactory(ks, keyManagerFactory.getKeyManagers());
-
         // Setting sslProtocols param to null tells NanoHTTPD to allow all protocols supported by the ServerSocketFactory
         nano.makeSecure(factory, null);
 
         nano.start(NanoHTTPD.SOCKET_READ_TIMEOUT, false);
 
         Log.i(TAG, "Server started");
-
         return nano::stop;
     }
 
